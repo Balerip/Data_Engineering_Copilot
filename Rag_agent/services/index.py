@@ -7,6 +7,7 @@ from llama_index.core import Settings
 import chromadb
 from dotenv import load_dotenv
 from . import data_loader
+from llama_index.embeddings.google import GooglePaLMEmbedding
 
 load_dotenv()
 
@@ -32,7 +33,10 @@ class Index:
         """Creates an index from the provided documents."""
         try:
             print("Creating index...")
-            self.embedding = OllamaEmbedding(model_name="mxbai-embed-large")
+            self.embedding_name =  "models/embedding-gecko-001"
+            self.api_key="AIzaSyAchKo1r7xttfjHPCpaVpGzd7RyfqbvRdU"
+            self.embedding=GooglePaLMEmbedding(model_name=self.embedding_name, api_key=self.api_key)
+           
             Settings.embed_model = self.embedding
             vector_store = ChromaVectorStore(chroma_collection=self.chroma_collection)
             storage_context = StorageContext.from_defaults(vector_store=vector_store)

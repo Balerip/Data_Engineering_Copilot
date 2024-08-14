@@ -5,6 +5,8 @@ from llama_index.core import SimpleDirectoryReader
 from dotenv import load_dotenv
 from llama_index.core import Document
 import bs4
+# from llama_index import Document, WebBaseLoader
+import bs4
 from langchain_community.document_loaders import WebBaseLoader
 
 load_dotenv()
@@ -22,7 +24,9 @@ class DataLoader:
         for i, url in enumerate(urls):
             try:
                 loader = WebBaseLoader(
-                web_paths=(urls))
+                web_paths=(urls)
+                )
+ 
                 docs = loader.load()
  
                 text_content = ""

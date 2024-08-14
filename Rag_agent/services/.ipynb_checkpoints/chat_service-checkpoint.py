@@ -1,11 +1,14 @@
 import os
 from fastapi import FastAPI,HTTPException
 from llama_index.llms.ollama import Ollama
-from llama_index.llms.ollama_embedding import OllamaEmbedding  # Assuming this is your embedding model
+# from llama_index.llms.ollama_embedding import OllamaEmbedding  # Assuming this is your embedding model
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
 from llama_index.core import VectorStoreIndex, Settings
 import index
+# imports
+from llama_index.embeddings.google import GooglePaLMEmbedding
+
 
 class Agent:
     def __init__(self, directory: str, storage_directory: str):
@@ -16,10 +19,10 @@ class Agent:
             raise ValueError("Failed to load or create the index.")
         
         # Initialize query engine with similarity_top_k=3
-        self.embedding = OllamaEmbedding(
-            model_name="mxbai-embed-large",
-   
-        )
+        self.embedding_name =  "models/embedding-gecko-001"
+        api_key="AIzaSyAchKo1r7xttfjHPCpaVpGzd7RyfqbvRdU"
+        self.embedding=GooglePaLMEmbedding(model_name=model_name, api_key=api_key)
+        embeddings = embed_model.get_text_embedding("Google PaLM Embeddings.")
         self.query_engine = self.index.as_query_engine(
             similarity_top_k=3,
             embedding_model=self.embedding # Use the embedding model
