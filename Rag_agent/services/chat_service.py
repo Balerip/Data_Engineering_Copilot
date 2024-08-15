@@ -60,7 +60,7 @@ class Agent:
         )
 
         # Define ReAct Agent with the query engine tool
-        self.query_agent = ReActAgent.from_tools([self.query_engine_tool], llm=Settings.llm, verbose=True)
+        self.query_agent = ReActAgent.from_tools([self.query_engine_tool], llm=Settings.llm, verbose=True,max_iterations=5)
         print("Agent created successfully.")
 
     def get_query_react_agent(self) -> ReActAgent:
@@ -133,7 +133,7 @@ class Agent:
         )
   
 
-async def get_query_response(message: str) -> str:
+def get_query_response(message: str) -> str:
     """
     Processes a chat message and returns a response.
     """
@@ -158,8 +158,8 @@ async def get_query_response(message: str) -> str:
         raise HTTPException(status_code=500, detail=str(e))
 
 # Run the test
-# question_1 = "What is the course title and course description for course code DS 3000 in Data science program?"
-# print(get_query_response(question_1))
+question_1 = "What is the course title and course description for course code DS 3000 in Data science program?"
+print(get_query_response(question_1))
 
 # question_2="What are the corequisites for the Data Science Programming Practicum course in Data Science program?"
 # print(get_query_response(question_2))
