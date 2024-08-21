@@ -1,5 +1,7 @@
 import os
+
 from fastapi import FastAPI, HTTPException
+from .chat_memory import ChatMemory
 from llama_index.llms.ollama import Ollama
 from llama_index.embeddings.ollama import OllamaEmbedding
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
@@ -9,35 +11,47 @@ from llama_index.embeddings.openai import OpenAIEmbedding
 from . import index
 from dotenv import load_dotenv
 from llama_index.embeddings.google import GooglePaLMEmbedding
-
+from llama_index.core.storage.chat_store import SimpleChatStore
+from llama_index.core.memory import ChatMemoryBuffer
+ 
 # Load environment variables from .env file
 load_dotenv()
-
+ 
 class Agent:
-    def __init__(self, directory: str, storage_directory: str,urls: list[str] = None):
+    def __init__(self, directory: str, storage_directory: str,key: str,urls: list[str] = None):
         self.directory = directory
         self.storage_directory = storage_directory
         self.urls = ["https://studentfinance.northeastern.edu/"]
+        self.chat_memory = ChatMemory(user_id=key)
+   
+        
+  
         print(f"Agent class, Data storage directory: {self.directory}")
         print(f"Agent class, Index storage directory: {self.storage_directory}")
-
+ 
         self.index = index.Index(directory, storage_directory).load_index(urls=self.urls)
         
         if self.index is None:
             raise ValueError("Failed to load or create the index.")
+        # self.chat_store = SimpleChatStore()
+        # self.chat_memory = ChatMemoryBuffer.from_defaults(
+        #     token_limit=3000,
+        #     chat_store=self.chat_store,
+        #     chat_store_key="user1",  # You can change this key based on the user/session
+        # )
         
         print("Creating embedding model...")
         self.embedding_name =  "models/embedding-gecko-001"
         self.api_key="AIzaSyAchKo1r7xttfjHPCpaVpGzd7RyfqbvRdU"
         self.embedding=GooglePaLMEmbedding(model_name=self.embedding_name, api_key=self.api_key)
-
+ 
         print("Creating LLM model...")
         llm_model = Ollama(model="llama3", request_timeout=60.0)
-
+ 
         # Initialize Settings with the models
         Settings.embed_model = self.embedding
         Settings.llm = llm_model
-
+ 
         # Initialize query engine
         print("Creating query engine...")
         self.query_engine = self.index.as_query_engine(
@@ -45,26 +59,28 @@ class Agent:
             embedding_model=Settings.embed_model,
             llm=Settings.llm  # Pass LLM model to the query engine
         )
-
+ 
         # Define metadata for the tool
         self.metadata = ToolMetadata(
             name="QueryEngineTool",
             description=("Handles Queries relsted to resources in Northeastern University Silicon Valley Campus")
         )
-
+ 
         # Initialize the query engine tool with metadata
         self.query_engine_tool = QueryEngineTool(
             query_engine=self.query_engine,
             metadata=self.metadata,
            
         )
-
+ 
         # Define ReAct Agent with the query engine tool
-        self.query_agent = ReActAgent.from_tools([self.query_engine_tool], llm=Settings.llm, verbose=True,max_iterations=5)
+        self.query_agent = ReActAgent.from_tools([self.query_engine_tool], llm=Settings.llm, verbose=True)
         print("Agent created successfully.")
-
+ 
     def get_query_react_agent(self) -> ReActAgent:
         return self.query_agent
+    def get_chat_memory(self)->ChatMemory:
+        return self.chat_memory
     
     def create_prompt(self,query: str) -> str:
         return (
@@ -88,7 +104,7 @@ class Agent:
         # "3. For questions not related to campus resources, respond with: 'I only answer questions about Northeastern Silicon Valley campus resources.'\n\n"
         # "QUERY:\n"
        "When building an LLM for specific data, such as course data, using expert prompting techniques can significantly improve the accuracy and relevance of the model's responses. Expert prompting involves crafting system prompts that guide the model towards more accurate, context-aware, and domain-specific outputs.\n"
-       "CONTEXT:\n" 
+       "CONTEXT:\n"
        "Your LLM needs to respond to queries related to course offerings, prerequisites, instructors, and schedules for Northeastern University."
        "Purpose:\n"
        "Guide the model to provide precise, contextually relevant information on courses."
@@ -109,10 +125,10 @@ class Agent:
        "For example, if a student asks about INFO 5001 course your response should include the course title, prerequisites, instructor, schedule, and any relevant enrollment details."
        "User Prompt:\n"
        "What is the description for INFO 5001?"
-       "LLM Response:\n" 
-       """The Description for INFO 5001 Application Modeling and Design course is that it practices social-technical 
-       software engineering methods and tools to solve real-world problems. Explores innovative design and programming 
-       techniques to build significant business applications quickly. Studies the process of systematically combining 
+       "LLM Response:\n"
+       """The Description for INFO 5001 Application Modeling and Design course is that it practices social-technical
+       software engineering methods and tools to solve real-world problems. Explores innovative design and programming
+       techniques to build significant business applications quickly. Studies the process of systematically combining
        UX techniques, business processes, and complex data models to assemble
        applications that are user-friendly and meet business requirements. Employs the object-oriented paradigm,
        visual user interface design principles, and programming languages such as Java, as well as productivity tools,
@@ -122,7 +138,7 @@ class Agent:
        "User Prompt:\n"
        "Can I enroll in CS 6140 Machine Learning course? If yes, what are the prerequisites that I need to complete?"
        "LLM Response:\n"
-       """The prerequisite courses for the above course is CS 5800 with a minimum grade of C- 
+       """The prerequisite courses for the above course is CS 5800 with a minimum grade of C-
           or CS 7800 with a minimum grade of CCS 6200. Information Retrieval which provides an introduction to information retrieval systems and different approaches to information retrieval.
           Topics covered include evaluation of information retrieval systems; retrieval, language, and indexing models;
           file organization; compression; relevance feedback; clustering; distributed retrieval and metasearch;
@@ -131,35 +147,58 @@ class Agent:
        "Query:\n"
        f"{query}"
         )
-  
 
-def get_query_response(message: str) -> str:
+    
+ 
+def get_query_response(message: str, user_id: str) -> str:
     """
     Processes a chat message and returns a response.
     """
     try:
         directory = os.environ.get("DATA_STORAGE_DIRECTORY")
         storage_directory = os.environ.get("INDEX_STORAGE_DIRECTORY")
+        
 
-        agent = Agent(directory, storage_directory)
+        print(f"Directory: {directory}, Storage Directory: {storage_directory}")
+
+        # Initialize the agent
+        agent = Agent(directory, storage_directory, user_id)
         react_agent = agent.get_query_react_agent()
+        chat_memory = agent.get_chat_memory()
+
+        # Retrieve previous conversations
+        previous_conversations = chat_memory.get_all()
+        print(f"Previous Conversations: {previous_conversations}")
+
+        # Combine chat history with the new user message
+        conversation_history = "\n".join([
+            f"User: {msg['user_message']}\nAgent: {msg['agent_response']}"
+            for msg in previous_conversations
+        ])
+        print(f"Conversation History: {conversation_history}")
+
         custom_prompt = agent.create_prompt(message)
-        query_response = react_agent.chat(custom_prompt)
+        full_prompt = f"{conversation_history}\nUser: {message}\n{custom_prompt}"
+        print(f"Full Prompt: {full_prompt}")
 
-        if hasattr(query_response, 'response'):
-            agent_response = query_response.response
-        else:
-            agent_response = "Response attribute missing"
+        query_response = react_agent.chat(full_prompt)  # Adjust method name if needed
+        agent_response = query_response.response if hasattr(query_response, 'response') else "Response attribute missing"
+        print(f"Agent Response: {agent_response}")
 
-        return f"Agent response: {agent_response}"  # Returning actual response
+        # Store the new message and response in chat memory
+        chat_memory.put_messages({"user_message": message, "agent_response": agent_response})
+        print(f"Agent response stored: {agent_response}")
+        return f"Agent response: {agent_response}"
+
     except Exception as e:
-        # More detailed logging for debugging
         print(f"Error in get_query_response: {e}")
+
         raise HTTPException(status_code=500, detail=str(e))
 
 # Run the test
-question_1 = "What is the course title and course description for course code DS 3000 in Data science program?"
-print(get_query_response(question_1))
 
-# question_2="What are the corequisites for the Data Science Programming Practicum course in Data Science program?"
-# print(get_query_response(question_2))
+question_1 = "What is the course title and course description for course code DS 3000 in Data Science program?"
+print(get_query_response(question_1,"user_1"))
+question_2 = "What are the prerequisite courses for INFO 6150 in Information Systems program? "
+print(get_query_response(question_2,"user_1"))
+
