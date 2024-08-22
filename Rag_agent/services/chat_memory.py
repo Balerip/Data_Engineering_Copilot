@@ -25,3 +25,9 @@ class ChatMemory:
         history = self.load_history()
         history.append(messages)
         self.save_history(history)
+    
+    def clear_history(self):
+        """Clears the chat history to start a new conversation."""
+        if os.path.exists(self.file_path):
+            os.remove(self.file_path)
+        self.save_history([])

@@ -28,6 +28,7 @@ class Index:
         
         # Check if the collection already exists
         self.chroma_collection=self.chroma_client.get_or_create_collection(collection_name)
+        
 
     def create_index(self, documents: List[str]) -> VectorStoreIndex:
         """Creates an index from the provided documents."""
@@ -67,6 +68,8 @@ class Index:
         """Loads the index from Chroma or creates a new one if necessary."""
         try:
             print("Loading index ...")
+           
+                # Load documents only for new URLs
             documents = data_loader.DataLoader(self.directory).load_documents(urls)
             self.index = self.create_index(documents)
             self.persist_index(self.index)

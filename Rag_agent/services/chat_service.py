@@ -74,13 +74,18 @@ class Agent:
         )
  
         # Define ReAct Agent with the query engine tool
-        self.query_agent = ReActAgent.from_tools([self.query_engine_tool], llm=Settings.llm, verbose=True)
+        self.query_agent = ReActAgent.from_tools([self.query_engine_tool], llm=Settings.llm, verbose=True,max_iterations=10)
         print("Agent created successfully.")
  
     def get_query_react_agent(self) -> ReActAgent:
         return self.query_agent
     def get_chat_memory(self)->ChatMemory:
         return self.chat_memory
+    def clear_chat_history(self)->ChatMemory:
+        """
+        Clears the chat history for the current user.
+        """
+        self.chat_memory.clear_history()
     
     def create_prompt(self,query: str) -> str:
         return (
@@ -150,7 +155,7 @@ class Agent:
 
     
  
-def get_query_response(message: str, user_id: str) -> str:
+def get_query_response(message: str, user_id: str,clear_history: bool = False) -> str:
     """
     Processes a chat message and returns a response.
     """
@@ -163,9 +168,12 @@ def get_query_response(message: str, user_id: str) -> str:
 
         # Initialize the agent
         agent = Agent(directory, storage_directory, user_id)
+        if clear_history:
+            agent.clear_chat_history()
+            print(f"Chat history cleared for user: {user_id}")
         react_agent = agent.get_query_react_agent()
         chat_memory = agent.get_chat_memory()
-
+      
         # Retrieve previous conversations
         previous_conversations = chat_memory.get_all()
         print(f"Previous Conversations: {previous_conversations}")
@@ -178,7 +186,7 @@ def get_query_response(message: str, user_id: str) -> str:
         print(f"Conversation History: {conversation_history}")
 
         custom_prompt = agent.create_prompt(message)
-        full_prompt = f"{conversation_history}\nUser: {message}\n{custom_prompt}"
+        full_prompt = f"{conversation_history}\nUser: \n{custom_prompt}"
         print(f"Full Prompt: {full_prompt}")
 
         query_response = react_agent.chat(full_prompt)  # Adjust method name if needed
@@ -197,8 +205,9 @@ def get_query_response(message: str, user_id: str) -> str:
 
 # Run the test
 
-question_1 = "What is the course title and course description for course code DS 3000 in Data Science program?"
-print(get_query_response(question_1,"user_1"))
-question_2 = "What are the prerequisite courses for INFO 6150 in Information Systems program? "
-print(get_query_response(question_2,"user_1"))
-
+# question_1 = "What are the electives for Program management?"
+# print(get_query_response(question_1,"user_3"))
+question_2 = "What are the prerequisite courses for INFO 6250 course code in Information Systems program?"
+print(get_query_response(question_2,"user_4",True))
+question_3="What are the prerequesites, you have not answered it correctly?Please try again"
+print(get_query_response(question_3,"user_4",False))
