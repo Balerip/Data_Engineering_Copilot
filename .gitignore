@@ -1,5 +1,7 @@
-__pycache__
-.DS_Store
-env/
-newenv/
+.env
+*.json
+dataStorage/
+indexStorage/
+__pycache__/
 *.pyc
+venv/
