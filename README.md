@@ -46,7 +46,7 @@ This application creates an AI-powered copilot that can answer questions about s
   ollama pull llama3
   ```
 
-## 📦 Installation
+## Installation
 
 1. **Clone the repository**
    ```bash
@@ -71,7 +71,7 @@ This application creates an AI-powered copilot that can answer questions about s
    mkdir -p Rag_agent/indexStorage
    ```
 
-## 🚀 Usage
+## Usage
 
 ### Running the Application
 
