@@ -82,11 +82,10 @@ This application creates an AI-powered copilot that can answer questions about s
 
 2. **Run the Streamlit app**
    ```bash
-   streamlit run app.py
+   streamlit run streamlit.py
    ```
 
-3. **Access the application**
-   - Open browser to `http://localhost:8501`
+
 
 ### Using the Copilot
 
@@ -100,7 +99,7 @@ This application creates an AI-powered copilot that can answer questions about s
 - "Explain dbt models and references"
 - "Generate 5 quiz questions about Spark SQL"
 
-## ⚙️ Configuration
+## Configuration
 
 ### Customizing Documentation Sources
 
@@ -146,7 +145,7 @@ llm = Ollama(
 )
 ```
 
-## 🎯 Features in Detail
+## Features in Detail
 
 ### Web Crawler (`data_loader.py`)
 - Crawls websites to specified depth
@@ -171,7 +170,7 @@ llm = Ollama(
 - User-specific conversation histories
 - Clear history option for fresh starts
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -194,7 +193,7 @@ llm = Ollama(
    - Verify URLs are accessible
    - Check crawling logs for errors
 
-## 🔄 Development
+## Development
 
 ### Adding New Documentation Sources
 
@@ -209,14 +208,14 @@ llm = Ollama(
 - Add support for more document formats
 - Integrate external APIs or databases
 
-## 📊 Performance Considerations
+## Performance Considerations
 
 - **Initial Indexing**: First run takes 5-10 minutes to crawl and index
 - **Query Response**: Typical response time 3-10 seconds
 - **Memory Usage**: ~2-4GB during operation
 - **Storage**: ~100MB per 50 indexed pages
 
-## 🔒 Security Notes
+## Security Notes
 
 - Chat histories are stored locally in plain JSON
 - No authentication implemented by default
