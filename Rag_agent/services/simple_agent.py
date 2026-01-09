@@ -64,25 +64,20 @@ class SimpleWorkingAgent:
         )
         
         # MUCH STRICTER system prompt
-        system_prompt = """You are a documentation assistant with access to ONLY these specific documents:
-        1. Apache Spark SQL documentation
-        2. dbt (data build tool) documentation  
-        3. Apache Airflow DAGs documentation
+        system_prompt = """
+            You are a conversational documentation assistant.
 
-        CRITICAL RULES:
-        - You MUST use the docs_search tool for EVERY answer
-        - You can ONLY answer based on what the docs_search tool returns
-        - If docs_search returns no relevant information, say: "I don't have documentation for that topic. I only have Spark, dbt, and Airflow docs."
-        - NEVER use your general knowledge about Kafka, Snowflake, or any other technology
-        - NEVER answer questions about topics not in the indexed documents
-        - If asked about Kafka specifically, respond: "I don't have Kafka documentation. I can only help with Spark, dbt, and Airflow."
-        - Always cite which document your answer comes from (Spark/dbt/Airflow)
-        
-        Before answering ANY question:
-        1. Use docs_search tool FIRST
-        2. Check if the returned content is actually relevant
-        3. If not relevant, admit you don't have that information
-        4. NEVER fill in gaps with general knowledge"""
+            You have access to:
+            - Documentation search tool (Spark, dbt, Airflow)
+            - Conversation history provided in the prompt
+
+            Rules:
+            1. Treat this as an ongoing conversation, not a single question
+            2. Use prior Q&A to understand follow-up questions
+            3. Use docs_search when factual grounding is required
+            4. If the documentation does not contain the answer, say so clearly
+            5. Do NOT use general knowledge outside the indexed documents
+            """
         
         # Create ReActAgent with strict settings
         self.agent = ReActAgent(
@@ -125,11 +120,27 @@ class SimpleWorkingAgent:
         async def run_agent():
             try:
                 print(f"\n=== Processing: {question} ===")
-                
-                # The workflow ReActAgent expects user_msg parameter
-                response = await self.agent.run(user_msg=question)
-                
-                # Extract response text - handle different response types
+
+                # 🔹 STEP 1: Read chat memory
+                history_text = ""
+                if self.chat_memory:
+                    past = self.chat_memory.get_all()
+                    if past:
+                        history_text = "\n".join(
+                            [f"Q: {m['question']}\nA: {m['answer']}" for m in past[-3:]]
+                        )
+
+                # 🔹 STEP 2: Inject memory into prompt
+                prompt = f"""Conversation so far:
+                                {history_text}
+
+                                User question:
+                                {question}
+                                """
+
+                # 🔹 STEP 3: Run agent with memory-aware prompt
+                response = await self.agent.run(user_msg=prompt)
+
                 if hasattr(response, 'response'):
                     result = str(response.response)
                 elif hasattr(response, 'output'):
@@ -138,12 +149,9 @@ class SimpleWorkingAgent:
                     result = str(response.content)
                 else:
                     result = str(response)
-                
-                # Final check - if the response mentions technologies we don't have docs for
-                if any(topic in result.lower() for topic in unsupported_topics):
-                    return "I can only provide information from the Spark, dbt, and Airflow documentation I have indexed. I cannot answer about other technologies."
-                
+
                 return result
+
                     
             except Exception as e:
                 print(f"Agent error: {e}")
