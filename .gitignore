@@ -4,4 +4,5 @@ dataStorage/
 indexStorage/
 __pycache__/
 *.pyc
+venv/*secret*
 venv/
