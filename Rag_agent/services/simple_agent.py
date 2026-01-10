@@ -9,6 +9,7 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from index import Index
 from chat_memory import ChatMemory
 
+
 class SimpleWorkingAgent:
     def __init__(self, directory: str, storage_directory: str, user_id: str):
         self.directory = directory
@@ -49,17 +50,18 @@ class SimpleWorkingAgent:
         Settings.llm = llm
         
         # Create working query engine with stricter settings
-        self.query_engine = self.index.as_query_engine(
-            similarity_top_k=5,
-            response_mode="compact"
+        self.chat_engine = self.index.as_chat_engine(
+            similarity_top_k=3,  # fewer = faster
+            response_mode="compact",
+            chat_memory=self.chat_memory.get_all()  # load previous memory
         )
         
         # Create tool with very explicit description
         tool = QueryEngineTool(
-            query_engine=self.query_engine,
+            query_engine=self.chat_engine,  # use chat engine now
             metadata=ToolMetadata(
                 name="docs_search",
-                description="Search ONLY in indexed Apache Spark, dbt, and Apache Airflow documentation. This tool contains NO Kafka, NO Snowflake, NO other technology docs."
+                description="Search ONLY in indexed Apache Spark, dbt, and Apache Airflow documentation. NEVER answer about Kafka, Snowflake, or other technologies."
             )
         )
         
@@ -121,25 +123,8 @@ class SimpleWorkingAgent:
             try:
                 print(f"\n=== Processing: {question} ===")
 
-                # 🔹 STEP 1: Read chat memory
-                history_text = ""
-                if self.chat_memory:
-                    past = self.chat_memory.get_all()
-                    if past:
-                        history_text = "\n".join(
-                            [f"Q: {m['question']}\nA: {m['answer']}" for m in past[-3:]]
-                        )
-
-                # 🔹 STEP 2: Inject memory into prompt
-                prompt = f"""Conversation so far:
-                                {history_text}
-
-                                User question:
-                                {question}
-                                """
-
                 # 🔹 STEP 3: Run agent with memory-aware prompt
-                response = await self.agent.run(user_msg=prompt)
+                response = self.chat_engine.chat(question)
 
                 if hasattr(response, 'response'):
                     result = str(response.response)
