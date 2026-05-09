@@ -1,4 +1,4 @@
-# Data Engineering Copilot 
+# DocSearch-RAG
 
 A Retrieval-Augmented Generation (RAG) application that provides intelligent assistance for data engineering questions, specifically focused on Apache Spark, dbt (data build tool), and Apache Airflow documentation.
 
